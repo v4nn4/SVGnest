@@ -1,19 +1,19 @@
 from pathlib import Path
 from .paths import Paths
 from .svg import save_svg
-from .placer import pack_svgs
+from .placer import pack_svgs_ga
 from xml.etree import ElementTree as ET
 
 
 def nest(paths: Paths) -> Path:
     paths.ensure()
     svg_files = sorted(paths.raw.glob('*.svg'))
-    # pack 4 copies of each SVG present in the raw folder
-    svg_files = [p for p in svg_files for _ in range(4)]
-    combined = pack_svgs(svg_files, bin_width=10000.0)
+    # pack 25 copies of each SVG present in the raw folder
+    svg_files = [p for p in svg_files for _ in range(25)]
+    combined = pack_svgs_ga(svg_files, bin_width=1000.0)
     rect = combined.find('rect')
-    root_width = '10000'
-    root_height = '5000'
+    root_width = '1000'
+    root_height = '500'
     if rect is not None:
         rect.set('width', root_width)
         rect.set('height', root_height)
