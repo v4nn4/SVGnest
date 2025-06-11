@@ -12,18 +12,24 @@ def nest(paths: Paths) -> Path:
     svg_files = [p for p in svg_files for _ in range(4)]
     combined = pack_svgs(svg_files, bin_width=10000.0)
     rect = combined.find('rect')
+    root_width = '10000'
+    root_height = '5000'
     if rect is not None:
-        rect.set('width', '10000')
-        rect.set('height', '5000')
+        rect.set('width', root_width)
+        rect.set('height', root_height)
     else:
         ET.SubElement(
             combined,
             'rect',
-            width='10000',
-            height='5000',
+            width=root_width,
+            height=root_height,
             fill='none',
             stroke='black',
         )
+    # ensure the svg element itself reflects the final canvas size
+    combined.set('width', root_width)
+    combined.set('height', root_height)
+    combined.set('viewBox', f"0 0 {root_width} {root_height}")
     output_file = paths.output / 'nested.svg'
     save_svg(combined, output_file)
     return output_file

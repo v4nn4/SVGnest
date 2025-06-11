@@ -39,6 +39,13 @@ def test_pack_svgs(tmp_path: Path):
     groups = [g for g in result.findall('.//g') if 'transform' in g.attrib]
     assert len(groups) == 2
 
+    # root element should have dimensions covering all shapes
+    rect = result.find('rect')
+    assert rect is not None
+    assert result.get('width') == rect.get('width')
+    assert result.get('height') == rect.get('height')
+    assert result.get('viewBox') == f"0 0 {rect.get('width')} {rect.get('height')}"
+
 
 def test_pack_svgs_rectangle_bounds(tmp_path: Path):
     f1 = tmp_path / 'a.svg'
