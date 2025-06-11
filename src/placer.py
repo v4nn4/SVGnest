@@ -24,7 +24,7 @@ def pack_svgs(
     rotations: Iterable[float] | None = None,
 ) -> ET.Element:
     """Pack multiple SVGs into a single SVG document."""
-    placed: list[Tuple[ET.Element, float, float, Polygon]] = []
+    placed: list[Tuple[ET.Element, float, float, float, Polygon]] = []
     x_cursor = 0.0
     y_cursor = 0.0
     row_height = 0.0
@@ -35,15 +35,18 @@ def pack_svgs(
     for path, angle in zip(paths_iter, rotations_list):
         svg = load_svg(path)
         poly = polygon_from_svg(path)
+        minx, miny, maxx, maxy = poly.bounds
         poly = rotate(poly, angle, origin="center")
-        width = poly.bounds[2] - poly.bounds[0]
-        height = poly.bounds[3] - poly.bounds[1]
+        offx, offy, maxx_r, maxy_r = poly.bounds
+        poly = translate(poly, xoff=-offx, yoff=-offy)
+        width = maxx_r - offx
+        height = maxy_r - offy
         if x_cursor + width > bin_width:
             x_cursor = 0.0
             y_cursor += row_height + spacing
             row_height = 0.0
         placed_poly = translate(poly, xoff=x_cursor, yoff=y_cursor)
-        placed.append((svg, x_cursor, y_cursor, angle, placed_poly))
+        placed.append((svg, x_cursor - offx, y_cursor - offy, angle, placed_poly))
         x_cursor += width + spacing
         row_height = max(row_height, height)
     root = ET.Element('svg', xmlns='http://www.w3.org/2000/svg')
