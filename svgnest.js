@@ -343,7 +343,6 @@
 			p.require('matrix.js');
 			p.require('geometryutil.js');
                        p.require('../dist/placementworker.bundle.js');
-                       p.require('@doodle3d/clipper-lib/clipper');
 			
 			var self = this;
 			var spawncount = 0;
@@ -544,7 +543,6 @@
 				});
 				
 				p2.require('json.js');
-                               p2.require('@doodle3d/clipper-lib/clipper');
 				p2.require('matrix.js');
 				p2.require('geometryutil.js');
                                 p2.require('../dist/placementworker.bundle.js');
