@@ -74,17 +74,29 @@ def pack_svgs(
     if margin:
         group_attrib['transform'] = f'translate({margin},{margin})'
     group = ET.SubElement(root, 'g', **group_attrib)
-    union_poly: Polygon | None = None
+    # Track overall bounds without repeatedly unioning polygons which can be
+    # quite expensive.  The bounding box of the union is simply the min/max of
+    # all individual boxes, so accumulate those values directly for better
+    # performance.
+    union_minx: float | None = None
+    union_miny: float | None = None
+    union_maxx: float | None = None
+    union_maxy: float | None = None
     for svg, x, y, angle, poly in placed:
         g = ET.SubElement(group, 'g', transform=f'rotate({angle}) translate({x},{y})')
         g.extend(list(svg))
-        if union_poly is None:
-            union_poly = poly
+        minx, miny, maxx, maxy = poly.bounds
+        if union_minx is None:
+            union_minx, union_miny, union_maxx, union_maxy = minx, miny, maxx, maxy
         else:
-            union_poly = union_poly.union(poly)
-    if union_poly is not None:
-        total_width = union_poly.bounds[2] - union_poly.bounds[0]
-        total_height = union_poly.bounds[3] - union_poly.bounds[1]
+            union_minx = min(union_minx, minx)
+            union_miny = min(union_miny, miny)
+            union_maxx = max(union_maxx, maxx)
+            union_maxy = max(union_maxy, maxy)
+
+    if union_minx is not None:
+        total_width = union_maxx - union_minx
+        total_height = union_maxy - union_miny
         rect_width = total_width + margin * 2
         rect_height = total_height + margin * 2
         # Set overall SVG dimensions so the packed shapes fit within the canvas
