@@ -12,19 +12,22 @@ from .svg import load_svg
 from .geometry import polygon_from_svg
 
 
-def pack_svgs(paths: Iterable[Path], spacing: float = 10.0, bin_width: float = 1000.0) -> ET.Element:
+def pack_svgs(
+    paths: Iterable[Path],
+    spacing: float = 10.0,
+    bin_width: float = 1000.0,
+    margin: float = 0.0,
+) -> ET.Element:
     """Pack multiple SVGs into a single SVG document."""
     placed: list[Tuple[ET.Element, float, float, Polygon]] = []
     x_cursor = 0.0
     y_cursor = 0.0
     row_height = 0.0
-    total_width_sum = 0.0
     for path in paths:
         svg = load_svg(path)
         poly = polygon_from_svg(path)
         width = poly.bounds[2] - poly.bounds[0]
         height = poly.bounds[3] - poly.bounds[1]
-        total_width_sum += width
         if x_cursor + width > bin_width:
             x_cursor = 0.0
             y_cursor += row_height + spacing
@@ -34,7 +37,10 @@ def pack_svgs(paths: Iterable[Path], spacing: float = 10.0, bin_width: float = 1
         x_cursor += width + spacing
         row_height = max(row_height, height)
     root = ET.Element('svg', xmlns='http://www.w3.org/2000/svg')
-    group = ET.SubElement(root, 'g')
+    group_attrib: dict[str, str] = {}
+    if margin:
+        group_attrib['transform'] = f'translate({margin},{margin})'
+    group = ET.SubElement(root, 'g', **group_attrib)
     union_poly: Polygon | None = None
     for svg, x, y, poly in placed:
         g = ET.SubElement(group, 'g', transform=f'translate({x},{y})')
@@ -46,13 +52,13 @@ def pack_svgs(paths: Iterable[Path], spacing: float = 10.0, bin_width: float = 1
     if union_poly is not None:
         total_width = union_poly.bounds[2] - union_poly.bounds[0]
         total_height = union_poly.bounds[3] - union_poly.bounds[1]
-        desired_width = max(total_width, total_width_sum * 4, total_height * 16 / 9)
-        desired_height = desired_width * 9 / 16
+        rect_width = total_width + margin * 2
+        rect_height = total_height + margin * 2
         ET.SubElement(
             root,
             'rect',
-            width=str(desired_width),
-            height=str(desired_height),
+            width=str(rect_width),
+            height=str(rect_height),
             fill='none',
             stroke='black',
         )
