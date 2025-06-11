@@ -1,4 +1,4 @@
-
+var ClipperLib = require('@doodle3d/clipper-js');
 // jsClipper uses X/Y instead of x/y...
 function toClipperCoordinates(polygon){
 	var clone = [];
