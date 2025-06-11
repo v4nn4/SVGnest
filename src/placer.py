@@ -7,10 +7,10 @@ import random
 # implementation found in old/svgnest.js
 
 try:
-    from shapely.affinity import translate
+    from shapely.affinity import translate, rotate
     from shapely.geometry import Polygon
 except Exception:  # pragma: no cover - fallback when Shapely is missing
-    from .minishapely import translate, Polygon
+    from .minishapely import translate, rotate, Polygon
 
 from .svg import load_svg
 from .geometry import polygon_from_svg
@@ -21,15 +21,21 @@ def pack_svgs(
     spacing: float = 10.0,
     bin_width: float = 1000.0,
     margin: float = 0.0,
+    rotations: Iterable[float] | None = None,
 ) -> ET.Element:
     """Pack multiple SVGs into a single SVG document."""
     placed: list[Tuple[ET.Element, float, float, Polygon]] = []
     x_cursor = 0.0
     y_cursor = 0.0
     row_height = 0.0
-    for path in paths:
+    if rotations is None:
+        rotations = [0.0 for _ in paths]
+    paths_iter = list(paths)
+    rotations_list = list(rotations)
+    for path, angle in zip(paths_iter, rotations_list):
         svg = load_svg(path)
         poly = polygon_from_svg(path)
+        poly = rotate(poly, angle, origin="center")
         width = poly.bounds[2] - poly.bounds[0]
         height = poly.bounds[3] - poly.bounds[1]
         if x_cursor + width > bin_width:
@@ -37,7 +43,7 @@ def pack_svgs(
             y_cursor += row_height + spacing
             row_height = 0.0
         placed_poly = translate(poly, xoff=x_cursor, yoff=y_cursor)
-        placed.append((svg, x_cursor, y_cursor, placed_poly))
+        placed.append((svg, x_cursor, y_cursor, angle, placed_poly))
         x_cursor += width + spacing
         row_height = max(row_height, height)
     root = ET.Element('svg', xmlns='http://www.w3.org/2000/svg')
@@ -46,8 +52,8 @@ def pack_svgs(
         group_attrib['transform'] = f'translate({margin},{margin})'
     group = ET.SubElement(root, 'g', **group_attrib)
     union_poly: Polygon | None = None
-    for svg, x, y, poly in placed:
-        g = ET.SubElement(group, 'g', transform=f'translate({x},{y})')
+    for svg, x, y, angle, poly in placed:
+        g = ET.SubElement(group, 'g', transform=f'translate({x},{y}) rotate({angle})')
         g.extend(list(svg))
         if union_poly is None:
             union_poly = poly
@@ -80,12 +86,14 @@ def pack_svgs_ga(
     population_size: int = 10,
     generations: int = 20,
     mutation_rate: float = 0.1,
+    rotation_steps: int = 4,
 ) -> ET.Element:
     """Pack SVGs using a simple genetic algorithm optimization."""
     paths = list(paths)
     num = len(paths)
+    angle_choices = [i * (360 / rotation_steps) for i in range(max(rotation_steps, 1))]
 
-    def random_weighted_individual(scored: list[Tuple[float, list[int], ET.Element]], exclude: list[int] | None = None) -> list[int]:
+    def random_weighted_individual(scored: list[Tuple[float, tuple[list[int], list[float]], ET.Element]], exclude: tuple[list[int], list[float]] | None = None) -> tuple[list[int], list[float]]:
         """Select an individual weighted towards the start of the list."""
         pop = [s[1] for s in scored]
         if exclude is not None and exclude in pop:
@@ -101,30 +109,41 @@ def pack_svgs_ga(
             upper += 2 * weight * ((len(pop) - idx) / len(pop))
         return pop[0]
 
-    def mate(male: list[int], female: list[int]) -> Tuple[list[int], list[int]]:
-        cut = round(min(max(random.random(), 0.1), 0.9) * (len(male) - 1))
-        gene1 = male[:cut]
-        gene2 = female[:cut]
-        for g in female:
-            if g not in gene1:
-                gene1.append(g)
-        for g in male:
-            if g not in gene2:
-                gene2.append(g)
-        return gene1, gene2
+    def mate(male: tuple[list[int], list[float]], female: tuple[list[int], list[float]]) -> tuple[tuple[list[int], list[float]], tuple[list[int], list[float]]]:
+        placement_m, rot_m = male
+        placement_f, rot_f = female
+        cut = round(min(max(random.random(), 0.1), 0.9) * (len(placement_m) - 1))
+        gene1 = placement_m[:cut]
+        rot1 = rot_m[:cut]
+        gene2 = placement_f[:cut]
+        rot2 = rot_f[:cut]
+        for idx, p in enumerate(placement_f):
+            if p not in gene1:
+                gene1.append(p)
+                rot1.append(rot_f[idx])
+        for idx, p in enumerate(placement_m):
+            if p not in gene2:
+                gene2.append(p)
+                rot2.append(rot_m[idx])
+        return (gene1, rot1), (gene2, rot2)
 
-    def mutate(indiv: list[int]) -> list[int]:
-        clone = indiv[:]
-        for i in range(len(clone)):
+    def mutate(indiv: tuple[list[int], list[float]]) -> tuple[list[int], list[float]]:
+        placement, rot = indiv
+        placement = placement[:]
+        rot = rot[:]
+        for i in range(len(placement)):
             if random.random() < 0.01 * mutation_rate:
                 j = i + 1
-                if j < len(clone):
-                    clone[i], clone[j] = clone[j], clone[i]
-        return clone
+                if j < len(placement):
+                    placement[i], placement[j] = placement[j], placement[i]
+            if random.random() < 0.01 * mutation_rate:
+                rot[i] = random.choice(angle_choices)
+        return placement, rot
 
-    def evaluate(order: list[int]) -> Tuple[float, ET.Element]:
+    def evaluate(indiv: tuple[list[int], list[float]]) -> Tuple[float, ET.Element]:
+        order, rots = indiv
         ordered_paths = [paths[i] for i in order]
-        svg = pack_svgs(ordered_paths, spacing=spacing, bin_width=bin_width, margin=margin)
+        svg = pack_svgs(ordered_paths, spacing=spacing, bin_width=bin_width, margin=margin, rotations=rots)
         rect = svg.find("rect")
         if rect is not None:
             width = float(rect.get("width"))
@@ -135,17 +154,19 @@ def pack_svgs_ga(
         return width * height, svg
 
     # initial population with one ordered individual and the rest random
-    population: list[list[int]] = [list(range(num))]
+    initial_angles = [random.choice(angle_choices) for _ in range(num)]
+    population: list[tuple[list[int], list[float]]] = [(list(range(num)), initial_angles)]
     while len(population) < population_size:
         perm = list(range(num))
         random.shuffle(perm)
-        population.append(perm)
+        angles = [random.choice(angle_choices) for _ in range(num)]
+        population.append((perm, angles))
 
     best_svg: ET.Element | None = None
     best_fit = float("inf")
 
     for _ in range(generations):
-        scored: list[Tuple[float, list[int], ET.Element]] = []
+        scored: list[Tuple[float, tuple[list[int], list[float]], ET.Element]] = []
         for indiv in population:
             fit, svg = evaluate(indiv)
             scored.append((fit, indiv, svg))
@@ -154,7 +175,7 @@ def pack_svgs_ga(
                 best_svg = svg
         scored.sort(key=lambda x: x[0])
 
-        new_pop: list[list[int]] = [scored[0][1]]
+        new_pop: list[tuple[list[int], list[float]]] = [scored[0][1]]
         while len(new_pop) < population_size:
             male = random_weighted_individual(scored)
             female = random_weighted_individual(scored, exclude=male)
