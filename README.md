@@ -29,6 +29,17 @@ It also features part-in-part support, for placing parts in the holes of other p
 
 ![non-rectangular shapes](http://svgnest.com/github/recursion.png)
 
+### Building
+
+Generate browser bundles before opening `index.html`:
+
+```bash
+npm install
+npm run build
+```
+
+This creates `dist/svgnest.bundle.js` and `dist/placementworker.bundle.js` used by the demo.
+
 ## Usage
 
 Make sure all parts have been converted to outlines, and that no outlines overlap. Upload the SVG file and select one of the outlines to be used as the bin.
