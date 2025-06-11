@@ -1,0 +1,14 @@
+# Dependency directory
+node_modules/
+
+# Build outputs
+/dist/*.bundle.js
+!dist/.gitkeep
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
