@@ -106,4 +106,17 @@ def test_offset_shapes_transforms(tmp_path: Path):
     result = pack_svgs([f1, f2], spacing=5.0, bin_width=100.0)
     groups = [g for g in result.findall('.//g') if 'transform' in g.attrib]
     assert len(groups) == 2
-    assert groups[0].get('transform', '').startswith('translate(-50')
+    t0 = groups[0].get('transform', '')
+    assert t0.startswith('rotate(')
+    assert 'translate(-50' in t0
+
+
+def test_rotation_transform_order(tmp_path: Path):
+    f1 = tmp_path / 'a.svg'
+    f2 = tmp_path / 'b.svg'
+    _create_svg(f1, 10)
+    _create_svg(f2, 10)
+    result = pack_svgs([f1, f2], spacing=1.0, bin_width=100.0, rotations=[45.0, 0.0])
+    groups = [g for g in result.findall('.//g') if 'transform' in g.attrib]
+    assert groups[0].get('transform', '').startswith('rotate(45')
+    assert 'translate(' in groups[0].get('transform', '')

@@ -35,8 +35,7 @@ def pack_svgs(
     for path, angle in zip(paths_iter, rotations_list):
         svg = load_svg(path)
         poly = polygon_from_svg(path)
-        minx, miny, maxx, maxy = poly.bounds
-        poly = rotate(poly, angle, origin="center")
+        poly = rotate(poly, angle)
         offx, offy, maxx_r, maxy_r = poly.bounds
         poly = translate(poly, xoff=-offx, yoff=-offy)
         width = maxx_r - offx
@@ -56,7 +55,7 @@ def pack_svgs(
     group = ET.SubElement(root, 'g', **group_attrib)
     union_poly: Polygon | None = None
     for svg, x, y, angle, poly in placed:
-        g = ET.SubElement(group, 'g', transform=f'translate({x},{y}) rotate({angle})')
+        g = ET.SubElement(group, 'g', transform=f'rotate({angle}) translate({x},{y})')
         g.extend(list(svg))
         if union_poly is None:
             union_poly = poly
