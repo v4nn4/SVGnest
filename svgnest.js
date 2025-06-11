@@ -4,7 +4,9 @@
  */
  
 (function(root){
-	'use strict';
+       'use strict';
+
+       var ClipperLib = require('@doodle3d/clipper-js');
 
 	root.SvgNest = new SvgNest();
 	
@@ -341,7 +343,7 @@
 			p.require('matrix.js');
 			p.require('geometryutil.js');
 			p.require('placementworker.js');
-			p.require('clipper.js');
+                       p.require('@doodle3d/clipper-js');
 			
 			var self = this;
 			var spawncount = 0;
@@ -542,7 +544,7 @@
 				});
 				
 				p2.require('json.js');
-				p2.require('clipper.js');
+                               p2.require('@doodle3d/clipper-js');
 				p2.require('matrix.js');
 				p2.require('geometryutil.js');
 				p2.require('placementworker.js');				
