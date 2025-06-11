@@ -14,6 +14,12 @@ def _create_svg(path: Path, size: int) -> None:
     path.write_text(ET.tostring(svg, encoding='unicode'))
 
 
+def _create_svg_offset(path: Path, size: int, xoff: int, yoff: int) -> None:
+    svg = ET.Element('svg', viewBox=f"0 0 {size + xoff} {size + yoff}")
+    ET.SubElement(svg, 'rect', x=str(xoff), y=str(yoff), width=str(size), height=str(size))
+    path.write_text(ET.tostring(svg, encoding='unicode'))
+
+
 def _create_font_svg(path: Path) -> None:
     svg = ET.Element('svg')
     defs = ET.SubElement(svg, 'defs')
@@ -90,3 +96,14 @@ def test_font_svg_bounds(tmp_path: Path):
     _create_font_svg(f)
     poly = polygon_from_svg(f)
     assert poly.bounds == (0.0, -20.0, 100.0, 80.0)
+
+
+def test_offset_shapes_transforms(tmp_path: Path):
+    f1 = tmp_path / 'a.svg'
+    f2 = tmp_path / 'b.svg'
+    _create_svg_offset(f1, 10, 50, 0)
+    _create_svg_offset(f2, 20, 0, 0)
+    result = pack_svgs([f1, f2], spacing=5.0, bin_width=100.0)
+    groups = [g for g in result.findall('.//g') if 'transform' in g.attrib]
+    assert len(groups) == 2
+    assert groups[0].get('transform', '').startswith('translate(-50')
