@@ -54,6 +54,10 @@ def pack_svgs(
         total_height = union_poly.bounds[3] - union_poly.bounds[1]
         rect_width = total_width + margin * 2
         rect_height = total_height + margin * 2
+        # Set overall SVG dimensions so the packed shapes fit within the canvas
+        root.set('width', str(rect_width))
+        root.set('height', str(rect_height))
+        root.set('viewBox', f"0 0 {rect_width} {rect_height}")
         ET.SubElement(
             root,
             'rect',
