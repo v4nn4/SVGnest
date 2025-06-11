@@ -1,4 +1,4 @@
-var ClipperLib = require('@doodle3d/clipper-js');
+var ClipperLib = require('@doodle3d/clipper-lib/clipper');
 // jsClipper uses X/Y instead of x/y...
 function toClipperCoordinates(polygon){
 	var clone = [];
@@ -290,6 +290,10 @@ function PlacementWorker(binPolygon, paths, ids, rotations, config, nfpCache){
 
 }
 (typeof window !== 'undefined' ? window : self).PlacementWorker = PlacementWorker;
+(typeof window !== 'undefined' ? window : self).rotatePolygon = rotatePolygon;
+(typeof window !== 'undefined' ? window : self).ClipperLib = ClipperLib;
+(typeof window !== 'undefined' ? window : self).toClipperCoordinates = toClipperCoordinates;
+(typeof window !== 'undefined' ? window : self).toNestCoordinates = toNestCoordinates;
 
 // clipperjs uses alerts for warnings
 function alert(message) { 
