@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+import math
 from xml.etree import ElementTree as ET
 try:
     from shapely.geometry import box, Polygon, Point
@@ -13,16 +14,23 @@ except Exception:  # pragma: no cover - fallback when Shapely is missing
             self.x = x
             self.y = y
 
-        def buffer(self, r: float) -> Polygon:
-            return box(self.x - r, self.y - r, self.x + r, self.y + r)
+        def buffer(self, r: float, steps: int = 16) -> Polygon:
+            pts = []
+            for i in range(steps):
+                ang = 2 * math.pi * i / steps
+                pts.append((self.x + r * math.cos(ang), self.y + r * math.sin(ang)))
+            return Polygon(pts)
 
     def scale(poly: Polygon, sx: float, sy: float) -> Polygon:  # type: ignore[misc]
         minx, miny, maxx, maxy = poly.bounds
         cx = (minx + maxx) / 2
         cy = (miny + maxy) / 2
-        width = (maxx - minx) * sx / 2
-        height = (maxy - miny) * sy / 2
-        return box(cx - width, cy - height, cx + width, cy + height)
+        scaled = []
+        for x, y in poly.points:
+            dx = x - cx
+            dy = y - cy
+            scaled.append((cx + dx * sx, cy + dy * sy))
+        return Polygon(scaled)
 
     def unary_union(polys: list[Polygon]) -> Polygon:  # type: ignore[misc]
         result = polys[0]

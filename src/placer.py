@@ -16,6 +16,15 @@ from .svg import load_svg
 from .geometry import polygon_from_svg
 
 
+def _expand_bounds(bounds: tuple[float, float, float, float], margin: float) -> tuple[float, float, float, float]:
+    minx, miny, maxx, maxy = bounds
+    return minx - margin, miny - margin, maxx + margin, maxy + margin
+
+
+def _boxes_intersect(a: tuple[float, float, float, float], b: tuple[float, float, float, float]) -> bool:
+    return not (a[2] <= b[0] or a[0] >= b[2] or a[3] <= b[1] or a[1] >= b[3])
+
+
 def pack_svgs(
     paths: Iterable[Path],
     spacing: float = 10.0,
@@ -25,9 +34,6 @@ def pack_svgs(
 ) -> ET.Element:
     """Pack multiple SVGs into a single SVG document."""
     placed: list[Tuple[ET.Element, float, float, float, Polygon]] = []
-    x_cursor = 0.0
-    y_cursor = 0.0
-    row_height = 0.0
     if rotations is None:
         rotations = [0.0 for _ in paths]
     paths_iter = list(paths)
@@ -40,14 +46,29 @@ def pack_svgs(
         poly = translate(poly, xoff=-offx, yoff=-offy)
         width = maxx_r - offx
         height = maxy_r - offy
-        if x_cursor + width > bin_width:
-            x_cursor = 0.0
-            y_cursor += row_height + spacing
-            row_height = 0.0
-        placed_poly = translate(poly, xoff=x_cursor, yoff=y_cursor)
-        placed.append((svg, x_cursor - offx, y_cursor - offy, angle, placed_poly))
-        x_cursor += width + spacing
-        row_height = max(row_height, height)
+
+        y = 0.0
+        placed_poly = None
+        while placed_poly is None:
+            for x in range(0, int(bin_width - width) + 1):
+                candidate = translate(poly, xoff=float(x), yoff=y)
+                candidate_bb = _expand_bounds(candidate.bounds, spacing / 2)
+                collide = False
+                for _, _, _, _, other_poly in placed:
+                    other_bb = _expand_bounds(other_poly.bounds, spacing / 2)
+                    if _boxes_intersect(candidate_bb, other_bb):
+                        if spacing > 0 or candidate.intersects(other_poly):
+                            collide = True
+                            break
+                if not collide:
+                    placed_poly = candidate
+                    px = float(x)
+                    py = y
+                    break
+            if placed_poly is None:
+                y += 1.0
+
+        placed.append((svg, px - offx, py - offy, angle, placed_poly))
     root = ET.Element('svg', xmlns='http://www.w3.org/2000/svg')
     group_attrib: dict[str, str] = {}
     if margin:
