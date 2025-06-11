@@ -2,8 +2,11 @@ from pathlib import Path
 from typing import Iterable, Tuple
 from xml.etree import ElementTree as ET
 
-from shapely.affinity import translate
-from shapely.geometry import Polygon
+try:
+    from shapely.affinity import translate
+    from shapely.geometry import Polygon
+except Exception:  # pragma: no cover - fallback when Shapely is missing
+    from .minishapely import translate, Polygon
 
 from .svg import load_svg
 from .geometry import polygon_from_svg

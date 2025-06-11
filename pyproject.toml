@@ -6,7 +6,7 @@ authors = ["Your Name <your.email@example.com>"]
 packages = [{ include = "src" }]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = ">=3.12,<3.13"
 fire = "^0.5"
 shapely = "^2.0"
 
