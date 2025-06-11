@@ -18,11 +18,13 @@ def pack_svgs(paths: Iterable[Path], spacing: float = 10.0, bin_width: float = 1
     x_cursor = 0.0
     y_cursor = 0.0
     row_height = 0.0
+    total_width_sum = 0.0
     for path in paths:
         svg = load_svg(path)
         poly = polygon_from_svg(path)
         width = poly.bounds[2] - poly.bounds[0]
         height = poly.bounds[3] - poly.bounds[1]
+        total_width_sum += width
         if x_cursor + width > bin_width:
             x_cursor = 0.0
             y_cursor += row_height + spacing
@@ -44,6 +46,14 @@ def pack_svgs(paths: Iterable[Path], spacing: float = 10.0, bin_width: float = 1
     if union_poly is not None:
         total_width = union_poly.bounds[2] - union_poly.bounds[0]
         total_height = union_poly.bounds[3] - union_poly.bounds[1]
-        ET.SubElement(root, 'rect', width=str(total_width), height=str(total_height),
-                     fill='none', stroke='black')
+        desired_width = max(total_width, total_width_sum * 4, total_height * 16 / 9)
+        desired_height = desired_width * 9 / 16
+        ET.SubElement(
+            root,
+            'rect',
+            width=str(desired_width),
+            height=str(desired_height),
+            fill='none',
+            stroke='black',
+        )
     return root
