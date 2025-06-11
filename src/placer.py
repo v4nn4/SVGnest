@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Iterable, Tuple
 from xml.etree import ElementTree as ET
+import random
 
 try:
     from shapely.affinity import translate
@@ -67,3 +68,64 @@ def pack_svgs(
             stroke='black',
         )
     return root
+
+def pack_svgs_ga(
+    paths: Iterable[Path],
+    spacing: float = 10.0,
+    bin_width: float = 1000.0,
+    margin: float = 0.0,
+    population_size: int = 10,
+    generations: int = 20,
+    mutation_rate: float = 0.1,
+) -> ET.Element:
+    """Pack SVGs using a simple genetic algorithm optimization."""
+    paths = list(paths)
+    num = len(paths)
+
+    def evaluate(order: list[int]) -> Tuple[float, ET.Element]:
+        ordered_paths = [paths[i] for i in order]
+        svg = pack_svgs(ordered_paths, spacing=spacing, bin_width=bin_width, margin=margin)
+        rect = svg.find("rect")
+        if rect is not None:
+            width = float(rect.get("width"))
+            height = float(rect.get("height"))
+        else:
+            width = float(svg.get("width") or 0)
+            height = float(svg.get("height") or 0)
+        return width * height, svg
+
+    # initial population
+    population: list[list[int]] = [list(range(num))]
+    while len(population) < population_size:
+        perm = list(range(num))
+        random.shuffle(perm)
+        population.append(perm)
+
+    best_svg: ET.Element | None = None
+    best_fit = float("inf")
+
+    for _ in range(generations):
+        scored: list[Tuple[float, list[int], ET.Element]] = []
+        for indiv in population:
+            fit, svg = evaluate(indiv)
+            scored.append((fit, indiv, svg))
+            if fit < best_fit:
+                best_fit = fit
+                best_svg = svg
+        scored.sort(key=lambda x: x[0])
+        new_pop: list[list[int]] = [scored[0][1]]
+        while len(new_pop) < population_size:
+            m = random.choice(scored)[1]
+            f = random.choice(scored)[1]
+            cut = random.randint(1, num - 1)
+            child = m[:cut] + [x for x in f if x not in m[:cut]]
+            # mutation by swapping elements
+            for i in range(num):
+                if random.random() < mutation_rate:
+                    j = random.randint(0, num - 1)
+                    child[i], child[j] = child[j], child[i]
+            new_pop.append(child)
+        population = new_pop
+
+    return best_svg if best_svg is not None else pack_svgs(paths, spacing=spacing, bin_width=bin_width, margin=margin)
+
