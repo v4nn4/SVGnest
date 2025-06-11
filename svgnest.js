@@ -7,6 +7,7 @@
        'use strict';
 
        var ClipperLib = require('@doodle3d/clipper-lib/clipper');
+       var Parallel = require('paralleljs');
 
 	root.SvgNest = new SvgNest();
 	
@@ -542,7 +543,6 @@
 					evalPath: 'util/eval.js'
 				});
 				
-				p2.require('json.js');
 				p2.require('matrix.js');
 				p2.require('geometryutil.js');
                                 p2.require('../dist/placementworker.bundle.js');
