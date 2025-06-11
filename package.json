@@ -11,7 +11,8 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@doodle3d/clipper-lib": "^6.4.2-b"
+    "@doodle3d/clipper-lib": "^6.4.2-b",
+    "paralleljs": "^1.1.0"
   },
   "devDependencies": {
     "browserify": "^17.0.0"
